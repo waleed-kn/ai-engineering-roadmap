@@ -9,7 +9,7 @@ Pace: 5-8 hours per week. Each week ends with a concrete, working deliverable.
 | Week | Focus | Hours | Status |
 |------|-------|-------|--------|
 | 1 | Tokenomics, Strict JSON & Schema Control | 6 | Done |
-| 2 | Function Calling & Multi-Tool Orchestration | 7 | In progress |
+| 2 | Function Calling & Multi-Tool Orchestration | 7 | Done |
 | 3 | Chunking Strategies & Hybrid Search | 8 | Not started |
 | 4 | Two-Stage Re-Ranking & Safe Fallbacks | 7 | Not started |
 | 5 | ReAct Loops & Conversational Memory | 8 | Not started |
