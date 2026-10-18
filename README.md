@@ -1,104 +1,178 @@
+# AI Engineering Roadmap
 
+An 8-week, hands-on roadmap for moving from web development into production LLM engineering: structured outputs, tool calling, RAG, agents, MCP, observability, and evals. Everything is built in **TypeScript / Node.js**.
 
-# AI Invoice Extraction — Structured Outputs
+Pace: 5-8 hours per week. Each week ends with a concrete, working deliverable.
 
-A TypeScript-based invoice extraction tool that uses an LLM through the Groq API and validates extracted data with Zod.
+## Progress
 
-## Features
-
-- Extracts invoice details into a structured format.
-- Uses Zod to define and validate the invoice schema.
-- Uses OpenAI SDK with the Groq API.
-- Measures API response latency and reports token usage.
-- Estimates input size and rejects requests that exceed a configurable safety limit.
-- Tests schema validation against valid and invalid inputs.
+| Week | Focus | Hours | Status |
+|------|-------|-------|--------|
+| 1 | Tokenomics, Strict JSON & Schema Control | 6 | Done |
+| 2 | Function Calling & Multi-Tool Orchestration | 7 | In progress |
+| 3 | Chunking Strategies & Hybrid Search | 8 | Not started |
+| 4 | Two-Stage Re-Ranking & Safe Fallbacks | 7 | Not started |
+| 5 | ReAct Loops & Conversational Memory | 8 | Not started |
+| 6 | Agent Handoffs & Model Context Protocol (MCP) | 8 | Not started |
+| 7 | Tracing, Latency Optimization & Semantic Cache | 7 | Not started |
+| 8 | Production Evals & Security Guardrails | 8 | Not started |
 
 ## Tech Stack
 
-- **TypeScript** — application logic
-- **OpenAI SDK** — API integration
-- **Groq API** — language model inference
-- **Zod** — runtime data validation
-- **dotenv** — environment variable configuration
+- **Language / runtime:** TypeScript, Node.js (run with `tsx`)
+- **LLM providers:** Groq (`openai/gpt-oss-120b`, `gpt-oss-20b`) or OpenAI SDK
+- **Validation:** Zod
+- **Data (Weeks 3+):** PostgreSQL + pgvector, Prisma, Redis
+- **Agents:** MCP (Model Context Protocol)
+- **Observability (Week 7):** Langfuse
 
-## Extracted Invoice Fields
+## Repository Structure
 
-| Field | Type | Description |
-|---|---|---|
-| `invoiceNumber` | String | Invoice identifier |
-| `customerName` | String | Customer's name |
-| `total` | Number | Invoice total |
-| `currency` | Enum | `PKR`, `USD`, or `EUR` |
+```
+ai-engineering-roadmap/
+├── week-1/
+│   └── src/          # Invoice extractor + schema tests
+├── week-2/
+│   └── src/          # Multi-tool CLI assistant
+├── .env              # API keys (not committed)
+├── .gitignore
+├── package.json
+└── README.md
+```
+
+Each week lives in its own folder. New weeks are added as `week-N/` as I go.
 
 ## Getting Started
 
-### 1. Install dependencies
-
 ```bash
+# 1. Clone
+git clone https://github.com/waleed-kn/ai-engineering-roadmap.git
+cd ai-engineering-roadmap
+
+# 2. Install dependencies
 npm install
+
+# 3. Add your API key
+cp .env.example .env   # or create .env manually
 ```
 
-### 2. Configure environment variables
+Example `.env`:
 
-Create a `.env` file in the project root:
-
-```env
-GROQ_API_KEY=your_groq_api_key
-MAX_INPUT_TOKENS=8000
+```
+GROQ_API_KEY=your_key_here
 ```
 
-Replace the placeholder with your own Groq API key. Never commit your `.env` file or expose your API key.
-
-### 3. Run the application
+Run a week from the repo root:
 
 ```bash
-npx tsx src/index.ts
+npx tsx week-1/src/index.ts
+npx tsx week-2/src/index.ts
 ```
 
-### 4. Run schema tests
+---
 
-```bash
-npx tsx src/schema-test.ts
-```
+## Curriculum
 
-## Input Size Protection
+### Phase 1: Core Control & Structured Data (Weeks 1-2)
 
-The application estimates the input size before sending a request. If the estimate exceeds `MAX_INPUT_TOKENS`, it rejects the input before making the API call.
+#### Week 1: Tokenomics, Strict JSON & Schema Control (6h)
 
-**Note:** The current token estimator uses an approximate character-to-token ratio. It is a safety heuristic, not an exact tokenizer or a guarantee that the request fits the model's context window.
+**Key concepts:** token economics (BPE), pricing formulas, context window degradation, deterministic settings (`temperature`, `top_p`), native JSON schema extraction.
 
-## Evaluation
+**Deliverable:** a TypeScript script using Zod + OpenAI/Groq SDK that reliably extracts unstructured invoice/bio text into strict schemas with **zero parser errors over 20 runs**.
 
-The project was tested with 20 repeated runs using the same simple invoice.
+- [x] Measure latency and token cost variance across prompt iterations
+- [x] Implement clean fallback logic when context limits are hit
+- [x] Achieve 100% compliant JSON responses validated by runtime schemas
 
-- Schema-valid outputs: **20/20**
-- Correct outputs for the tested invoice: **20/20**
-- Average latency: **approximately 721 ms**
+#### Week 2: Function Calling & Multi-Tool Orchestration (7h)
 
-These results represent a small initial test, not a guarantee of accuracy across different invoices. Latency and token usage can vary between runs.
+**Key concepts:** function calling schemas, parallel tool dispatch, schema parameter validation, feeding external execution results back into model context.
 
-## Key Learning Outcomes
+**Deliverable:** a CLI assistant with two tools (`fetchWeather`, `queryDatabase`) that handles multi-step tool calls in an autonomous loop before producing final answers.
 
-- Understanding input and output token usage.
-- Using structured outputs to request predictable data.
-- Validating model output at runtime with Zod.
-- Understanding the difference between schema validity and factual accuracy.
-- Measuring latency and token usage.
-- Adding a configurable input-size safety check.
-- Testing valid and invalid data with `safeParse()`.
+- [ ] Enforce strict schema validation on tool parameters generated by the LLM
+- [ ] Execute parallel function calling in a single API round trip
+- [ ] Log and inspect full message state history arrays (system, user, assistant, tool)
 
-## Future Improvements
+### Phase 2: Production-Grade RAG (Weeks 3-4)
 
-- Add more diverse invoice test cases.
-- Enforce business rules such as non-empty customer names and non-negative totals.
-- Improve token estimation.
-- Add explicit error handling for API failures and malformed inputs.
-- Track evaluation results across multiple invoices.
+#### Week 3: Chunking Strategies & Hybrid Search (8h)
 
-## Security
+**Key concepts:** sliding window overlap, markdown header hierarchy chunking, vector indexing (HNSW in pgvector), combining lexical (BM25/FTS) with dense semantic search.
 
-Keep API keys in environment variables. Do not commit `.env` to version control.
+**Deliverable:** a PostgreSQL table with both `vector` and `tsvector` columns, plus an API route executing Reciprocal Rank Fusion (RRF) to merge keyword and semantic matches.
 
-## License
+- [ ] Benchmark search relevance: pure vector vs. hybrid on complex queries
+- [ ] Measure query retrieval latency with and without an HNSW index
+- [ ] Implement document chunking that preserves structural headers and tables
 
-This project is currently for learning and portfolio development.
+#### Week 4: Two-Stage Re-Ranking & Safe Fallbacks (7h)
+
+**Key concepts:** bi-encoders vs. cross-encoders, second-stage relevance scoring (Cohere Rerank API), out-of-domain query handling, strict hallucination prevention.
+
+**Deliverable:** route the top 20 retrieved chunks through a re-ranking model down to the top 3 context chunks, and trigger deterministic fallbacks when chunk confidence drops below 0.65.
+
+- [ ] Calculate context token reductions achieved through two-stage re-ranking
+- [ ] Add automated fallbacks ("Information unavailable") on unindexed test queries
+- [ ] Write integration tests ensuring the pipeline refuses to hallucinate facts
+
+### Phase 3: Agent Systems & Memory (Weeks 5-6)
+
+#### Week 5: ReAct Loops & Conversational Memory (8h)
+
+**Key concepts:** the ReAct (Reason + Act + Observe) paradigm, sliding window context buffers, persistent session memory, loop termination safeguards.
+
+**Deliverable:** a framework-free ReAct loop in TypeScript using a simple while-loop with hard iteration caps (max 5) and persistent session memory in Redis/Supabase.
+
+- [ ] Persist session state and message history across discrete user calls
+- [ ] Add automated summarization when history exceeds 3,000 context tokens
+- [ ] Implement step caps and execution timeouts to prevent infinite loops
+
+#### Week 6: Agent Handoffs & Model Context Protocol (8h)
+
+**Key concepts:** router-worker architecture, intent triage, MCP servers/clients, standard STDIO/SSE transports, seamless sub-agent handoffs.
+
+**Deliverable:** an MCP server with resource and tool endpoints (local file reading, DB check), and an MCP client agent that resolves user queries across tools.
+
+- [ ] Build an intent classifier that directs requests to specialized tools
+- [ ] Execute complete context-preserving handoffs between distinct agent tasks
+- [ ] Test and debug local MCP transport over standard STDIO interfaces
+
+### Phase 4: Observability, Evals & Hardening (Weeks 7-8)
+
+#### Week 7: Tracing, Latency Optimization & Semantic Cache (7h)
+
+**Key concepts:** LLM observability (Langfuse), Time-To-First-Token (TTFT), step latency profiling, vector similarity caching for recurring queries.
+
+**Deliverable:** instrument the Next.js/Node API with Langfuse tracing, and deploy a semantic cache layer returning sub-50ms responses for prompts with >0.96 cosine similarity.
+
+- [ ] Trace every retrieval step, tool call latency, and cost per request
+- [ ] Verify sub-50ms cached responses on paraphrased user prompts
+- [ ] Calculate cumulative cost metrics per 1,000 simulated user queries
+
+#### Week 8: Production Evals & Security Guardrails (8h)
+
+**Key concepts:** automated LLM-as-a-judge evaluation (Ragas/DeepEval), Context Precision, Recall, Faithfulness, hardening against prompt injection.
+
+**Deliverable:** an automated evaluation suite of 15 question/ground-truth pairs scoring the RAG pipeline's Faithfulness (>= 0.85) and defending against adversarial prompt injection.
+
+- [ ] Record baseline scores for Faithfulness, Answer Relevance, and Context Recall
+- [ ] Run adversarial red-teaming tests against injection attacks
+- [ ] Document final evaluation scores and architecture decisions in the project portfolio
+
+---
+
+## Milestone Matrix
+
+| Weeks | Core Focus | Portfolio Deliverable |
+|-------|-----------|-----------------------|
+| 1-2 | Structured APIs & Tool Calling | Zod-validated schema extractor and multi-tool CLI agent |
+| 3-4 | Production RAG | Hybrid search with RRF and a re-ranking pipeline with safe fallbacks |
+| 5-6 | Agents & MCP | Framework-free ReAct agent with memory, plus an MCP server/client |
+| 7-8 | Observability & Evals | Langfuse tracing, semantic cache, and an automated eval suite |
+
+## Notes
+
+- Secrets live in `.env` and are never committed.
+- This is a personal learning repo. Code favors clarity over cleverness.
